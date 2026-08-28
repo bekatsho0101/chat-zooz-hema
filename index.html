@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>💕 شات زووز وهيما 💕</title>
+    <!-- Firebase SDK compat (v9 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            background: linear-gradient(145deg, #1a0b12 0%, #2d1422 40%, #3d1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        /* ===== CONTAINERS ===== */
+        .auth-container, .chat-container {
+            width: 100%;
+            max-width: 520px;
+            background: linear-gradient(170deg, #fce4ec, #f8bbd0, #f48fb1);
+            border-radius: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 0 2px #ff9eb5 inset, 0 0 0 4px #ffd6e0 inset;
+            padding: 30px 25px;
+            transition: all 0.3s ease;
+        }
+        .chat-container {
+            display: none;
+            padding: 0;
+            overflow: hidden;
+            border-radius: 40px 40px 30px 30px;
+        }
+        .auth-container h2 {
+            text-align: center;
+            color: #880e4f;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .auth-container .sub {
+            text-align: center;
+            color: #6a1b3a;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .auth-container .form-group { margin-bottom: 15px; }
+        .auth-container label {
+            display: block;
+            font-weight: 600;
+            color: #4a1a2e;
+            margin-bottom: 5px;
+        }
+        .auth-container input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 30px;
+            border: 2px solid rgba(233,30,99,0.15);
+            background: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        .auth-container input:focus {
+            border-color: #e91e63;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(233,30,99,0.15);
+        }
+        .auth-container .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #e91e63, #ad1457);
+            border: none;
+            border-radius: 30px;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 5px;
+        }
+        .auth-container .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 24px rgba(233,30,99,0.4);
+        }
+        .auth-container .error-msg {
+            color: #c62828;
+            background: rgba(198,40,40,0.1);
+            padding: 8px;
+            border-radius: 20px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+        /* ===== CHAT UI ===== */
+        .chat-header {
+            background: linear-gradient(135deg, #880e4f, #ad1457, #6a1b3a);
+            padding: 16px 20px 14px;
+            text-align: center;
+            border-bottom: 3px solid #ff80ab;
+            position: relative;
+        }
+        .chat-header::after {
+            content: '💞';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+            background: #ad1457;
+            padding: 0 12px;
+            border-radius: 30px;
+            border: 2px solid #ff80ab;
+        }
+        .chat-header .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header .top-row .title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-header .top-row .title i { color: #ff2d55; }
+        .chat-header .top-row .user-info {
+            color: #ffcdd2;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-header .top-row .user-info .logout-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ffcdd2;
+            padding: 4px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: 0.3s;
+        }
+        .chat-header .top-row .user-info .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .chat-header .status-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #ffb3c6;
+            margin-top: 4px;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 16px 14px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255,245,247,0.3);
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 5px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #e91e63; border-radius: 10px; }
+        .msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 82%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .msg-left { align-self: flex-start; }
+        .msg-right { align-self: flex-end; }
+        .msg-bubble {
+            padding: 10px 14px 8px;
+            border-radius: 22px 22px 6px 22px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .msg-left .msg-bubble {
+            background: #fff;
+            color: #3e1a2b;
+            border-radius: 22px 22px 22px 6px;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .msg-right .msg-bubble {
+            background: linear-gradient(135deg, #e91e63, #ad1457);
+            color: #fff;
+            border-radius: 22px 22px 6px 22px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 4px 16px rgba(233,30,99,0.25);
+        }
+        .msg-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 4px;
+            font-size: 0.6rem;
+            opacity: 0.7;
+        }
+        .msg-left .msg-meta { color: #6a4b5a; }
+        .msg-right .msg-meta { color: #ffcdd2; }
+        .msg-sender { font-weight: 600; font-size: 0.7rem; }
+        .msg-time { font-weight: 300; }
+        .copy-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: inherit;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 0.6rem;
+            cursor: pointer;
+            transition: 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.5;
+        }
+        .copy-btn:hover { opacity: 1; background: rgba(255,255,255,0.25); }
+        .copy-btn.copied { opacity: 1; color: #76ff03; }
+        .typing-indicator {
+            align-self: flex-start;
+            display: none;
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 30px;
+            backdrop-filter: blur(4px);
+            font-size: 0.8rem;
+            color: #6a1b3a;
+            gap: 8px;
+            align-items: center;
+        }
+        .typing-indicator .dots span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #ad1457;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: dotBounce 1.2s infinite;
+        }
+        .typing-indicator .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator .dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+        .chat-input-area {
+            background: rgba(255,245,247,0.5);
+            padding: 12px 16px 16px;
+            backdrop-filter: blur(6px);
+            border-top: 2px solid rgba(233,30,99,0.15);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input-area .input-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.7);
+            border-radius: 30px;
+            padding: 0 16px;
+            border: 2px solid rgba(233,30,99,0.15);
+            transition: 0.3s;
+        }
+        .chat-input-area .input-wrap:focus-within {
+            border-color: #e91e63;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(233,30,99,0.15);
+        }
+        .chat-input-area .input-wrap input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 12px 6px;
+            font-size: 0.95rem;
+            outline: none;
+            color: #2d1422;
+        }
+        .chat-input-area .input-wrap input::placeholder { color: #a98192; }
+        .chat-input-area .send-btn {
+            background: linear-gradient(135deg, #e91e63, #ad1457);
+            border: none;
+            color: #fff;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: 0.25s;
+            box-shadow: 0 4px 16px rgba(233,30,99,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .chat-input-area .send-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 24px rgba(233,30,99,0.5);
+        }
+        .quick-emoji-row {
+            display: flex;
+            gap: 6px;
+            padding: 6px 16px 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: rgba(255,245,247,0.2);
+            border-top: 1px solid rgba(233,30,99,0.06);
+        }
+        .quick-emoji-row button {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            border-radius: 30px;
+            padding: 2px 12px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .quick-emoji-row button:hover {
+            transform: scale(1.15);
+            background: rgba(255,255,255,0.6);
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(12px);
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            z-index: 999;
+            opacity: 0;
+            transition: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast i { color: #ff4081; }
+        @media (max-width: 500px) {
+            .auth-container, .chat-container { max-width: 100%; border-radius: 28px; }
+            .chat-messages { height: 340px; }
+            .msg { max-width: 88%; }
+            .chat-header .top-row .title { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== TOAST ===== -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMsg">تم النسخ!</span>
+    </div>
+
+    <!-- ===== AUTH CONTAINER ===== -->
+    <div class="auth-container" id="authContainer">
+        <h2><i class="fas fa-heart" style="color:#e91e63;"></i> شات زووز وهيما <i class="fas fa-heart" style="color:#e91e63;"></i></h2>
+        <div class="sub">💕 سجل دخولك لتبدأ المحادثة 💕</div>
+        <div id="authForm">
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> اسم المستخدم</label>
+                <input type="text" id="usernameInput" placeholder="زووز أو هيما" required />
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> كلمة المرور</label>
+                <input type="password" id="passwordInput" placeholder="******" required />
+            </div>
+            <button class="btn" id="authBtn">دخول</button>
+            <div class="error-msg" id="authError">⚠️ اسم المستخدم أو كلمة المرور غير صحيحة</div>
+        </div>
+    </div>
+
+    <!-- ===== CHAT CONTAINER ===== -->
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <div class="top-row">
+                <div class="title"><i class="fas fa-heart"></i> زووز &amp; هيما</div>
+                <div class="user-info">
+                    <span id="currentUserDisplay">👤</span>
+                    <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
+                </div>
+            </div>
+            <div class="status-row">
+                <span id="onlineStatus">🟢 متصل</span>
+                <span id="userCount">👥 0 متصل</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <span>✍️</span>
+            <span class="dots"><span></span><span></span><span></span></span>
+            <span>يكتب...</span>
+        </div>
+
+        <div class="quick-emoji-row">
+            <button data-emoji="❤️">❤️</button>
+            <button data-emoji="😍">😍</button>
+            <button data-emoji="💕">💕</button>
+            <button data-emoji="🌹">🌹</button>
+            <button data-emoji="😘">😘</button>
+            <button data-emoji="💖">💖</button>
+            <button data-emoji="✨">✨</button>
+            <button data-emoji="🥰">🥰</button>
+            <button data-emoji="💗">💗</button>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="input-wrap">
+                <input type="text" id="msgInput" placeholder="اكتب رسالتك... 💌" autocomplete="off" />
+            </div>
+            <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  🔥 FIREBASE CONFIG – تم إضافة مفاتيحك الحقيقية ✅
+        // ================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOUV0fZkToPPPQ-sVgtXW0TaM6Dbdd7l8",
+            authDomain: "azzza123.firebaseapp.com",
+            databaseURL: "https://azzza123-default-rtdb.firebaseio.com",
+            projectId: "azzza123",
+            storageBucket: "azzza123.firebasestorage.app",
+            messagingSenderId: "513885076556",
+            appId: "1:513885076556:web:def62555c08d672c5888e9"
+        };
+
+        // ================================================================
+        //  INIT FIREBASE
+        // ================================================================
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================================================================
+        //  LOCAL AUTH – المستخدمون المسموح بهم
+        // ================================================================
+        const VALID_USERS = {
+            'زووز': '1223',
+            'هيما': '1223'
+        };
+
+        const SESSION_KEY = 'loveChatSession';
+        const SESSION_DURATION = 7 * 60 * 60 * 1000; // 7 ساعات
+
+        function getSession() {
+            try {
+                const data = localStorage.getItem(SESSION_KEY);
+                if (!data) return null;
+                const session = JSON.parse(data);
+                if (session.expires && Date.now() < session.expires) {
+                    return session;
+                } else {
+                    localStorage.removeItem(SESSION_KEY);
+                    return null;
+                }
+            } catch { return null; }
+        }
+
+        function setSession(username) {
+            const session = { username, expires: Date.now() + SESSION_DURATION };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        }
+
+        function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+        // ================================================================
+        //  DOM REFS
+        // ================================================================
+        const authContainer = document.getElementById('authContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const usernameInput = document.getElementById('usernameInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const authBtn = document.getElementById('authBtn');
+        const authError = document.getElementById('authError');
+        const currentUserDisplay = document.getElementById('currentUserDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const messagesEl = document.getElementById('chatMessages');
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const userCount = document.getElementById('userCount');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+
+        let currentUser = null;
+        let messagesRef = null;
+        let messageListener = null;
+        let typingListener = null;
+        let userCountListener = null;
+        let typingTimeout = null;
+        let toastTimer = null;
+
+        // ================================================================
+        //  TOAST
+        // ================================================================
+        function showToast(msg) {
+            toastMsg.textContent = msg || 'تم!';
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ================================================================
+        //  AUTH HANDLER
+        // ================================================================
+        authBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            if (!username || !password) {
+                authError.textContent = '⚠️ يرجى ملء جميع الحقول';
+                authError.style.display = 'block';
+                return;
+            }
+            if (VALID_USERS[username] && VALID_USERS[username] === password) {
+                setSession(username);
+                currentUser = username;
+                showChat();
+                authError.style.display = 'none';
+                usernameInput.value = '';
+                passwordInput.value = '';
+            } else {
+                authError.textContent = '⚠️ اسم المستخدم أو كلمة المرور غير صحيحة';
+                authError.style.display = 'block';
+            }
+        });
+
+        document.querySelectorAll('#authForm input').forEach(inp => {
+            inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') authBtn.click(); });
+        });
+
+        // ================================================================
+        //  SHOW / HIDE CHAT
+        // ================================================================
+        function showChat() {
+            authContainer.style.display = 'none';
+            chatContainer.style.display = 'block';
+            currentUserDisplay.textContent = '👤 ' + currentUser;
+            initChat();
+            updatePresence(true);
+            listenTyping();
+            listenUserCount();
+        }
+
+        function hideChat() {
+            chatContainer.style.display = 'none';
+            authContainer.style.display = 'block';
+            detachListeners();
+            updatePresence(false);
+            messagesEl.innerHTML = '';
+            currentUser = null;
+        }
+
+        // ================================================================
+        //  PRESENCE
+        // ================================================================
+        function updatePresence(online) {
+            if (!currentUser) return;
+            const presenceRef = database.ref('presence/' + currentUser);
+            if (online) {
+                presenceRef.set({ username: currentUser, online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+                presenceRef.onDisconnect().update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+            } else {
+                presenceRef.update({ online: false });
+                presenceRef.onDisconnect().cancel();
+            }
+        }
+
+        // ================================================================
+        //  USER COUNT
+        // ================================================================
+        function listenUserCount() {
+            if (userCountListener) userCountListener.off();
+            userCountListener = database.ref('presence').on('value', snap => {
+                let count = 0;
+                snap.forEach(child => { if (child.val().online) count++; });
+                userCount.textContent = '👥 ' + count + ' متصل';
+            });
+        }
+
+        // ================================================================
+        //  TYPING
+        // ================================================================
+        function listenTyping() {
+            if (typingListener) typingListener.off();
+            typingListener = database.ref('typing').on('value', snap => {
+                let someoneTyping = false;
+                snap.forEach(child => {
+                    const data = child.val();
+                    if (data.username !== currentUser && data.typing) someoneTyping = true;
+                });
+                typingIndicator.style.display = someoneTyping ? 'flex' : 'none';
+            });
+        }
+
+        function setTyping(typing) {
+            if (!currentUser) return;
+            const ref = database.ref('typing/' + currentUser);
+            if (typing) {
+                ref.set({ username: currentUser, typing: true });
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => ref.update({ typing: false }), 3000);
+            } else {
+                ref.update({ typing: false });
+                clearTimeout(typingTimeout);
+            }
+        }
+
+        // ================================================================
+        //  MESSAGES
+        // ================================================================
+        function initChat() {
+            detachListeners();
+            messagesRef = database.ref('messages');
+            messageListener = messagesRef.limitToLast(100).on('child_added', snap => {
+                const data = snap.val();
+                if (data) renderMessage(data, snap.key);
+            });
+        }
+
+        function renderMessage(data, key) {
+            const { sender, text, timestamp } = data;
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : 'الآن';
+            const isMine = sender === currentUser;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${isMine ? 'msg-right' : 'msg-left'}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            const textSpan = document.createElement('div');
+            textSpan.className = 'msg-text';
+            textSpan.textContent = text;
+            bubble.appendChild(textSpan);
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'msg-sender';
+            senderSpan.textContent = sender;
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'msg-time';
+            timeSpan.textContent = time;
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> نسخ';
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.classList.add('copied');
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> تم!';
+                    showToast('📋 تم نسخ الرسالة');
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> نسخ';
+                    }, 1500);
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('📋 تم النسخ');
+                });
+            });
+            meta.appendChild(senderSpan);
+            meta.appendChild(timeSpan);
+            meta.appendChild(copyBtn);
+            bubble.appendChild(meta);
+            msgDiv.appendChild(bubble);
+            messagesEl.appendChild(msgDiv);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // ================================================================
+        //  SEND MESSAGE
+        // ================================================================
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text || !currentUser) return;
+            database.ref('messages').push({
+                sender: currentUser,
+                text: text,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            msgInput.value = '';
+            setTyping(false);
+        }
+
+        // ================================================================
+        //  DETACH LISTENERS
+        // ================================================================
+        function detachListeners() {
+            if (messageListener) { messagesRef.off('child_added', messageListener); messageListener = null; }
+            if (typingListener) { database.ref('typing').off('value', typingListener); typingListener = null; }
+            if (userCountListener) { database.ref('presence').off('value', userCountListener); userCountListener = null; }
+        }
+
+        // ================================================================
+        //  UI EVENTS
+        // ================================================================
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
+        msgInput.addEventListener('input', () => {
+            msgInput.value.trim().length > 0 ? setTyping(true) : setTyping(false);
+        });
+        document.querySelectorAll('.quick-emoji-row button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                msgInput.value += btn.getAttribute('data-emoji');
+                msgInput.focus();
+            });
+        });
+        logoutBtn.addEventListener('click', () => { clearSession(); hideChat(); });
+
+        // ================================================================
+        //  CHECK SESSION ON LOAD
+        // ================================================================
+        (function checkSession() {
+            const session = getSession();
+            if (session && VALID_USERS[session.username]) {
+                currentUser = session.username;
+                showChat();
+            } else {
+                authContainer.style.display = 'block';
+                chatContainer.style.display = 'none';
+            }
+        })();
+
+        console.log('💕 شات زووز وهيما – جاهز للاستخدام!');
+        console.log('🔐 المستخدمون: زووز / 1223 ، هيما / 1223');
+        console.log('🔥 تم ربط قاعدة البيانات: https://azzza123-default-rtdb.firebaseio.com/');
+    </script>
+</body>
+</html>
